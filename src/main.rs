@@ -6,6 +6,9 @@ use termion::raw::IntoRawMode;
 use termion::event::Key;
 use termion::input::TermRead;
 
+const WPM_LIMIT: u32 = 50;
+const CORRECT_LIMIT: u32 = 90;
+
 fn open_file() -> BufReader<File> {
     let args: Vec<String> = std::env::args().collect();
     let file = File::open(&args[1]).unwrap();
@@ -96,11 +99,24 @@ fn main() {
                 (((chars as f32) / ((chars + errors) as f32)) * 100f32) as u32
             );
 
+            let correct_color = if correct > CORRECT_LIMIT {
+                format!("{}", color::Fg(color::LightBlack))
+            } else {
+                format!("{}", color::Fg(color::Red))
+            };
+
+            let wpm_color = if wpm > WPM_LIMIT {
+                format!("{}", color::Fg(color::LightBlack))
+            } else {
+                format!("{}", color::Fg(color::Red))
+            };
+
             write!(
                 stdout,
-                "{}\r{}% {}{}",
-                color::Fg(color::LightBlack),
+                "\r{}{}% {}{}{}",
+                correct_color,
                 left_pad(correct, 3),
+                wpm_color,
                 right_pad(wpm, 4),
                 color::Fg(color::Reset)
             );
