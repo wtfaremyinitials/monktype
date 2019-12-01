@@ -64,62 +64,76 @@ fn main() {
         ).unwrap();
         stdout.flush().unwrap();
 
-        let start = Instant::now();
-        let mut chars = 0;
-        let mut errors = 0;
+        let mut success = false;
+        while !success {
+            let start = Instant::now();
+            let mut chars = 0;
+            let mut errors = 0;
 
-        for c in line.chars() {
-            if !c.is_ascii() {
+            for c in line.chars() {
+                if !c.is_ascii() {
+                    write!(stdout, "{}", termion::cursor::Right(1));
+                    continue;
+                }
+                stdout.flush().unwrap();
+
+                while c != get_key(&mut keys) {
+                    errors += 1;
+
+                    write!(stdout, "{}", 7 as char);
+                    stdout.flush().unwrap();
+                }
+
+                chars += 1;
+
                 write!(stdout, "{}", termion::cursor::Right(1));
-                continue;
-            }
-            stdout.flush().unwrap();
-
-            while c != get_key(&mut keys) {
-                errors += 1;
-
-                write!(stdout, "{}", 7 as char);
                 stdout.flush().unwrap();
             }
 
-            chars += 1;
+            if chars != 0 {
+                let wpm = {
+                    let words = (chars / 5) as f32;
+                    let minutes = (start.elapsed().as_millis() as f32) / 60_000f32;
+                    (words / minutes) as u32
+                };
 
-            write!(stdout, "{}", termion::cursor::Right(1));
-            stdout.flush().unwrap();
-        }
+                let correct = (
+                    ((chars as f32) / ((chars + errors) as f32)) * 100f32
+                ) as u32;
 
-        if chars != 0 {
-            let wpm = {
-                let words = (chars / 5) as f32;
-                let minutes = (start.elapsed().as_millis() as f32) / 60_000f32;
-                (words / minutes) as u32
-            };
+                let wpm_success = wpm >= WPM_LIMIT || chars < 15;
+                let correct_success = correct >= CORRECT_LIMIT;
 
-            let correct = (
-                (((chars as f32) / ((chars + errors) as f32)) * 100f32) as u32
-            );
+                let wpm_color = if wpm_success {
+                    format!("{}", color::Fg(color::LightBlack))
+                } else {
+                    format!("{}", color::Fg(color::Red))
+                };
 
-            let correct_color = if correct > CORRECT_LIMIT {
-                format!("{}", color::Fg(color::LightBlack))
+                let correct_color = if correct_success {
+                    format!("{}", color::Fg(color::LightBlack))
+                } else {
+                    format!("{}", color::Fg(color::Red))
+                };
+
+                write!(
+                    stdout,
+                    "\r{}{}% {}{}{}",
+                    correct_color,
+                    left_pad(correct, 3),
+                    wpm_color,
+                    right_pad(wpm, 4),
+                    color::Fg(color::Reset)
+                );
+
+                success = wpm_success && correct_success;
             } else {
-                format!("{}", color::Fg(color::Red))
-            };
+                success = true;
+            }
 
-            let wpm_color = if wpm > WPM_LIMIT {
-                format!("{}", color::Fg(color::LightBlack))
-            } else {
-                format!("{}", color::Fg(color::Red))
-            };
-
-            write!(
-                stdout,
-                "\r{}{}% {}{}{}",
-                correct_color,
-                left_pad(correct, 3),
-                wpm_color,
-                right_pad(wpm, 4),
-                color::Fg(color::Reset)
-            );
+            if !success {
+                write!(stdout, "\r{}", termion::cursor::Right(9));
+            }
         }
     }
 }
