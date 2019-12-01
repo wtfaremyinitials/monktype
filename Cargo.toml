@@ -1,0 +1,8 @@
+[package]
+name = "monktype"
+version = "0.1.0"
+authors = ["Will Franzen <wtfranzen@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+termion = "1.5.4"
