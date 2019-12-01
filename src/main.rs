@@ -6,7 +6,7 @@ use termion::raw::IntoRawMode;
 use termion::event::Key;
 use termion::input::TermRead;
 
-const WPM_LIMIT: u32 = 50;
+const WPM_LIMIT: u32 = 30;
 const CORRECT_LIMIT: u32 = 90;
 
 fn open_file() -> BufReader<File> {
@@ -49,10 +49,9 @@ fn main() {
 
     for line in WrappedLines::new(file.lines(), 80) {
         let line: String = line
-                            .trim()
                             .chars()
                             .filter(|c| c.is_ascii())
-                            .map(|c| if c.is_whitespace() { ' ' } else { c } )
+                            .map(|c| if c == '\t' { '»' } else { c } )
                             .collect();
 
         write!(
@@ -71,17 +70,19 @@ fn main() {
             let mut errors = 0;
 
             for c in line.chars() {
-                if !c.is_ascii() {
+                if !c.is_ascii() && c != '»' {
                     write!(stdout, "{}", termion::cursor::Right(1));
                     continue;
                 }
                 stdout.flush().unwrap();
 
-                while c != get_key(&mut keys) {
+                let mut key = get_key(&mut keys);
+                while (c != key) && !(c == '»' && key == '\t') {
                     errors += 1;
 
                     write!(stdout, "{}", 7 as char);
                     stdout.flush().unwrap();
+                    key = get_key(&mut keys);
                 }
 
                 chars += 1;
